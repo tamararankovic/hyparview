@@ -32,10 +32,10 @@ communication structures:
     - +get peers: nodes(address, conn)
     - +on neightbor up: nodes(address, conn)
     - +on neighbor down: node(address)
-    <!-- - broadcast: msg(type, payload, metadata: origin_node, sender_node, is_broadcast, ttl) -->
-    <!-- - on_broadcast_rcv(msg): bool[propagate futher] -->
+    # - broadcast: msg(type, payload, metadata: origin_node, sender_node, is_broadcast, ttl)
+    # - on_broadcast_rcv(msg): bool[propagate futher]
 
 tcp message
 - header (n bytes): payload length
 - payload (header bytes): msg(origin_node, type, payload length, payload)
-<!-- - payload (header bytes): msg(origin_node, is_broadcast, ttl, type, payload length, payload) -->
+# - payload (header bytes): msg(origin_node, is_broadcast, ttl, type, payload length, payload)
