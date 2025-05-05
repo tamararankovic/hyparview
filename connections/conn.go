@@ -5,6 +5,7 @@ import (
 )
 
 type Conn interface {
+	GetAddress() string
 	Send(msg data.Message, sender data.Node) error
 	onReceive(handler func(msg data.Message))
 	disconnect() error

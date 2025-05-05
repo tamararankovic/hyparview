@@ -23,9 +23,14 @@ type Join struct {
 }
 
 type ForwardJoin struct {
+	NodeID,
+	NodeAddress string
+	TTL int
 }
 
 type Disconnect struct {
+	NodeID,
+	NodeAddress string
 }
 
 type Neighbor struct {
