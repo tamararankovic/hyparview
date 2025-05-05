@@ -20,7 +20,7 @@ type HyParView struct {
 	msgHandlers map[data.MessageType]func(received connections.MsgReceived) error
 }
 
-func NewHyParView(config HyParViewConfig, self data.Node, connManager connections.ConnManager) HyParView {
+func NewHyParView(config HyParViewConfig, self data.Node, connManager connections.ConnManager) (HyParView, error) {
 	hv := HyParView{
 		self:        self,
 		config:      config,
@@ -35,7 +35,8 @@ func NewHyParView(config HyParViewConfig, self data.Node, connManager connection
 		data.DISCONNECT:   hv.onDisconnect,
 		data.FORWARD_JOIN: hv.onForwardJoin,
 	}
-	return hv
+	err := connManager.StartAcceptingConns()
+	return hv, err
 }
 
 func (h *HyParView) Join(contactNodeAddress string) error {
@@ -43,11 +44,7 @@ func (h *HyParView) Join(contactNodeAddress string) error {
 	if err != nil {
 		return err
 	}
-	err = h.connManager.StartAcceptingConns()
-	if err != nil {
-		return err
-	}
-	sub := h.connManager.OnReceive(h.onReeive)
+	_ = h.connManager.OnReceive(h.onReeive)
 	msg := data.Message{
 		Type: data.JOIN,
 		Payload: data.Join{
@@ -55,13 +52,7 @@ func (h *HyParView) Join(contactNodeAddress string) error {
 			NodeAddress: h.self.Address,
 		},
 	}
-	err = conn.Send(msg, h.self)
-	if err != nil {
-		sub.Unsubscribe()
-		h.connManager.StopAcceptingConns()
-		return err
-	}
-	return nil
+	return conn.Send(msg)
 }
 
 func (h *HyParView) GetPeers() []Peer {
@@ -109,7 +100,7 @@ func (h *HyParView) disconnectRandomPeer() error {
 			NodeAddress: h.self.Address,
 		},
 	}
-	err := disconnectPeer.conn.Send(disconnectMsg, h.self)
+	err := disconnectPeer.conn.Send(disconnectMsg)
 	if err != nil {
 		return err
 	}

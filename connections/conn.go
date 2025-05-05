@@ -6,7 +6,7 @@ import (
 
 type Conn interface {
 	GetAddress() string
-	Send(msg data.Message, sender data.Node) error
+	Send(msg data.Message) error
 	onReceive(handler func(msg data.Message))
 	disconnect() error
 	onDisconnect(handler func())

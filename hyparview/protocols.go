@@ -27,6 +27,7 @@ func (h *HyParView) onJoin(received connections.MsgReceived) error {
 		conn: received.Sender,
 	}
 	h.activeView = append(h.activeView, newPeer)
+	log.Printf("peer [ID=%s, address=%d] added to active view\n", newPeer.node.ID, newPeer.node.Address)
 	forwardJoinMsg := data.Message{
 		Type: data.FORWARD_JOIN,
 		Payload: data.ForwardJoin{
@@ -39,7 +40,7 @@ func (h *HyParView) onJoin(received connections.MsgReceived) error {
 		if peer.node.ID == newPeer.node.ID {
 			continue
 		}
-		err := peer.conn.Send(forwardJoinMsg, h.self)
+		err := peer.conn.Send(forwardJoinMsg)
 		if err != nil {
 			log.Println(err)
 		}
@@ -97,7 +98,7 @@ func (h *HyParView) onForwardJoin(received connections.MsgReceived) error {
 		return randomPeer.conn.Send(data.Message{
 			Type:    data.FORWARD_JOIN,
 			Payload: msg,
-		}, h.self)
+		})
 	}
 	return nil
 }

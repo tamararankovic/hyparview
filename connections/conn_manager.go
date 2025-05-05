@@ -2,6 +2,7 @@ package connections
 
 import (
 	"errors"
+	"log"
 	"slices"
 
 	"github.com/tamararankovic/hyparview/data"
@@ -30,6 +31,7 @@ func NewConnManager(newConnFn func(address string) (Conn, error), acceptConnsFn 
 
 func (cm *ConnManager) StartAcceptingConns() error {
 	return cm.acceptConnsFn(cm.stopAcceptingConns, func(conn Conn) {
+		log.Printf("new connection accepted %s\n", conn.GetAddress())
 		cm.addConn(conn)
 	})
 }
@@ -73,9 +75,11 @@ func (cm *ConnManager) OnReceive(handler func(msg MsgReceived)) Subscription {
 
 func (cm *ConnManager) addConn(conn Conn) {
 	conn.onReceive(func(msg data.Message) {
+		log.Println("message received %v\n", msg)
 		cm.messages <- MsgReceived{Msg: msg, Sender: conn}
 	})
 	cm.conns = append(cm.conns, conn)
+	log.Printf("connection added %s\n", conn.GetAddress())
 }
 
 type MsgReceived struct {
