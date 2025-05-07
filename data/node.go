@@ -1,6 +1,6 @@
 package data
 
 type Node struct {
-	ID,
-	Address string
+	ID string
+	ListenAddress string
 }

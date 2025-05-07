@@ -19,11 +19,11 @@ func main() {
 	contactNodeAddress := os.Args[3]
 	config := hyparview.Config{
 		NodeID:             id,
-		NodeAddress:        address,
+		ListenAddress:      address,
 		ContactNodeAddress: contactNodeAddress,
 		HyParViewConfig: hyparview.HyParViewConfig{
 			Fanout:          2,
-			PartialViewSize: 10,
+			PassiveViewSize: 10,
 			ARWL:            3,
 			PRWL:            2,
 			ShuffleInterval: 10,
@@ -32,10 +32,10 @@ func main() {
 		},
 	}
 	self := data.Node{
-		ID:      config.NodeID,
-		Address: config.NodeAddress,
+		ID:            config.NodeID,
+		ListenAddress: config.ListenAddress,
 	}
-	connManager := connections.NewConnManager(connections.NewTCPConn, connections.AcceptTcpConnsFn(self.Address))
+	connManager := connections.NewConnManager(connections.NewTCPConn, connections.AcceptTcpConnsFn(self.ListenAddress))
 	hv, err := hyparview.NewHyParView(config.HyParViewConfig, self, connManager)
 	if err != nil {
 		log.Fatal(err)

@@ -1,8 +1,6 @@
 package connections
 
-import (
-	"github.com/tamararankovic/hyparview/data"
-)
+import "github.com/tamararankovic/hyparview/data"
 
 type Conn interface {
 	GetAddress() string

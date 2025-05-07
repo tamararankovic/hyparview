@@ -18,29 +18,40 @@ type Message struct {
 }
 
 type Join struct {
-	NodeID,
-	NodeAddress string
+	NodeID        string
+	ListenAddress string
 }
 
 type ForwardJoin struct {
-	NodeID,
-	NodeAddress string
-	TTL int
+	NodeID        string
+	ListenAddress string
+	TTL           int
 }
 
 type Disconnect struct {
-	NodeID,
-	NodeAddress string
+	NodeID string
 }
 
 type Neighbor struct {
+	NodeID        string
+	ListenAddress string
+	HighPriority  bool
 }
 
 type NeighborReply struct {
+	NodeID        string
+	ListenAddress string
+	Accepted      bool
 }
 
 type Shuffle struct {
+	NodeID        string
+	ListenAddress string
+	Nodes         []Node
+	TTL           int
 }
 
 type ShuffleReply struct {
+	ReceivedNodes []Node
+	Nodes         []Node
 }

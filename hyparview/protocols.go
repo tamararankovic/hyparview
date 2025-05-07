@@ -3,6 +3,7 @@ package hyparview
 import (
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/tamararankovic/hyparview/connections"
 	"github.com/tamararankovic/hyparview/data"
@@ -21,19 +22,18 @@ func (h *HyParView) onJoin(received connections.MsgReceived) error {
 	}
 	newPeer := Peer{
 		node: data.Node{
-			ID:      msg.NodeID,
-			Address: msg.NodeAddress,
+			ID:            msg.NodeID,
+			ListenAddress: msg.ListenAddress,
 		},
 		conn: received.Sender,
 	}
 	h.activeView = append(h.activeView, newPeer)
-	log.Printf("peer [ID=%s, address=%d] added to active view\n", newPeer.node.ID, newPeer.node.Address)
+	log.Printf("peer [ID=%s, address=%d] added to active view\n", newPeer.node.ID, newPeer.conn.GetAddress())
 	forwardJoinMsg := data.Message{
 		Type: data.FORWARD_JOIN,
 		Payload: data.ForwardJoin{
-			NodeID:      msg.NodeID,
-			NodeAddress: msg.NodeAddress,
-			TTL:         h.config.ARWL,
+			NodeID: msg.NodeID,
+			TTL:    h.config.ARWL,
 		},
 	}
 	for _, peer := range h.activeView {
@@ -72,14 +72,14 @@ func (h *HyParView) onForwardJoin(received connections.MsgReceived) error {
 	}
 	newPeer := Peer{
 		node: data.Node{
-			ID:      msg.NodeID,
-			Address: msg.NodeAddress,
+			ID:            msg.NodeID,
+			ListenAddress: msg.ListenAddress,
 		},
 		conn: nil,
 	}
 	addedToActiveView := false
 	if msg.TTL == 0 || len(h.activeView) == 1 {
-		conn, err := h.connManager.Connect(msg.NodeAddress)
+		conn, err := h.connManager.Connect(msg.ListenAddress)
 		if err != nil {
 			return err
 		}
@@ -91,14 +91,122 @@ func (h *HyParView) onForwardJoin(received connections.MsgReceived) error {
 	}
 	msg.TTL--
 	if !addedToActiveView {
-		randomPeer := h.selectRandomPeer()
-		for randomPeer.node.Address == received.Sender.GetAddress() {
-			randomPeer = h.selectRandomPeer()
+		senderPeer := h.getPeer(received.Sender)
+		nodeIdBlacklist := make([]string, 0)
+		if senderPeer != nil {
+			nodeIdBlacklist = append(nodeIdBlacklist, senderPeer.node.ID)
 		}
+		randomPeer := h.selectRandomPeer(nodeIdBlacklist)
 		return randomPeer.conn.Send(data.Message{
 			Type:    data.FORWARD_JOIN,
 			Payload: msg,
 		})
 	}
+	return nil
+}
+
+func (h *HyParView) onNeighbor(received connections.MsgReceived) error {
+	msg, ok := received.Msg.Payload.(data.Neighbor)
+	if !ok {
+		return fmt.Errorf("msg %v not a neighbor msg", received.Msg.Payload)
+	}
+	accept := msg.HighPriority || !h.activeViewFull()
+	if accept {
+		if h.activeViewFull() {
+			err := h.disconnectRandomPeer()
+			if err != nil {
+				return err
+			}
+		}
+		newPeer := Peer{
+			node: data.Node{
+				ID:            msg.NodeID,
+				ListenAddress: msg.ListenAddress,
+			},
+			conn: received.Sender,
+		}
+		h.activeView = append(h.activeView, newPeer)
+		log.Printf("peer [ID=%s, address=%d] added to active view\n", newPeer.node.ID, newPeer.conn.GetAddress())
+	}
+	neighborReplyMsg := data.Message{
+		Type: data.NEIGHTBOR_REPLY,
+		Payload: data.NeighborReply{
+			NodeID:        msg.NodeID,
+			ListenAddress: msg.ListenAddress,
+			Accepted:      accept,
+		},
+	}
+	return received.Sender.Send(neighborReplyMsg)
+}
+
+func (h *HyParView) onNeighborReply(received connections.MsgReceived) error {
+	msg, ok := received.Msg.Payload.(data.NeighborReply)
+	if !ok {
+		return fmt.Errorf("msg %v not a neighbor reply msg", received.Msg.Payload)
+	}
+	if !msg.Accepted {
+		h.replacePeer([]string{msg.NodeID})
+	} else {
+		peer := h.getPeerCandidate(msg.NodeID)
+		if peer == nil {
+			return fmt.Errorf("peer [ID=%s] not found in passive view", msg.NodeID)
+		}
+		h.deletePeerCandidate(*peer)
+		peer.conn = received.Sender
+		h.activeView = append(h.activeView, *peer)
+		log.Printf("peer [ID=%s, address=%d] added to active view\n", peer.node.ID, peer.conn.GetAddress())
+	}
+	return nil
+}
+
+func (h *HyParView) onShuffle(received connections.MsgReceived) error {
+	msg, ok := received.Msg.Payload.(data.Shuffle)
+	if !ok {
+		return fmt.Errorf("msg %v not a shuffle msg", received.Msg.Payload)
+	}
+	msg.TTL--
+	if msg.TTL > 0 && len(h.activeView) > 1 {
+		peer := h.selectRandomPeer([]string{msg.NodeID})
+		if peer == nil {
+			return fmt.Errorf("cannot find a peer to forward the shuffle msg")
+		}
+		return peer.conn.Send(received.Msg)
+	} else {
+		passiveViewMaxIndex := int(math.Min(float64(len(msg.Nodes)), float64(len(h.passiveView))))
+		peers := h.passiveView[:passiveViewMaxIndex]
+		nodes := make([]data.Node, len(peers))
+		for i, peer := range peers {
+			nodes[i] = peer.node
+		}
+		conn, err := h.connManager.Connect(msg.ListenAddress)
+		if err != nil {
+			return err
+		}
+		shuffleReplyMsg := data.Message{
+			Type: data.SHUFFLE_REPLY,
+			Payload: data.ShuffleReply{
+				ReceivedNodes: msg.Nodes,
+				Nodes:         nodes,
+			},
+		}
+		err = conn.Send(shuffleReplyMsg)
+		if err != nil {
+			log.Println(err)
+		}
+		err = h.connManager.Disconnect(conn)
+		if err != nil {
+			log.Println(err)
+		}
+		h.integrateNodesIntoPartialView(msg.Nodes, []data.Node{})
+		return nil
+	}
+}
+
+func (h *HyParView) onShuffleReply(received connections.MsgReceived) error {
+	msg, ok := received.Msg.Payload.(data.ShuffleReply)
+	if !ok {
+		return fmt.Errorf("msg %v not a shuffle reply msg", received.Msg.Payload)
+	}
+	h.integrateNodesIntoPartialView(msg.Nodes, msg.ReceivedNodes)
 	return nil
 }

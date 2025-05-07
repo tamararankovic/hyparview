@@ -2,7 +2,7 @@ package hyparview
 
 type HyParViewConfig struct {
 	Fanout,
-	PartialViewSize,
+	PassiveViewSize,
 	ARWL,
 	PRWL,
 	ShuffleInterval,
@@ -12,7 +12,7 @@ type HyParViewConfig struct {
 
 type Config struct {
 	NodeID,
-	NodeAddress,
+	ListenAddress,
 	ContactNodeAddress string
 	HyParViewConfig
 }
