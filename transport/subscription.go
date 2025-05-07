@@ -1,4 +1,4 @@
-package connections
+package transport
 
 type Subscription struct {
 	unsub chan struct{}

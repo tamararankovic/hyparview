@@ -1,6 +1,6 @@
 package data
 
-type MessageType int
+type MessageType int8
 
 const (
 	JOIN MessageType = iota

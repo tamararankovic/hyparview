@@ -1,41 +1,4 @@
-messages:
-- join
-- forward join
-- disconnect
-- neighbor -> accept/reject
-- shuffle
-- shuffle reply
-
-config:
-- fanout (active view size = fanout+1)
-- partial view size
-- contact node address
-- Active Random Walk Length
-- Passive Random Walk Length
-- shuffle period
-- Ka
-- Kp
-
-failure detection:
-- tcp connection broken
-- peer blocked??
-
-communication structures:
-- connection
-    - send
-    - close
-    - on_rcv
-    - on_closed
-- hyparview
-    - -get active view: nodes(address, conn)
-    - -get passive view: nodes(address)
-    - +get peers: nodes(address, conn)
-    - +on neightbor up: nodes(address, conn)
-    - +on neighbor down: node(address)
-    # - broadcast: msg(type, payload, metadata: origin_node, sender_node, is_broadcast, ttl)
-    # - on_broadcast_rcv(msg): bool[propagate futher]
-
-tcp message
-- header (n bytes): payload length
-- payload (header bytes): msg(origin_node, type, payload length, payload)
-# - payload (header bytes): msg(origin_node, is_broadcast, ttl, type, payload length, payload)
+TODO:
+- serijalizacija
+- konkurentnost
+- svaki flow: neki od koraka fejlovao?

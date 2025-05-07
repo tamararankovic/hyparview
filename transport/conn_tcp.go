@@ -1,4 +1,4 @@
-package connections
+package transport
 
 import (
 	"encoding/binary"

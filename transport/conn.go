@@ -1,4 +1,4 @@
-package connections
+package transport
 
 import "github.com/tamararankovic/hyparview/data"
 

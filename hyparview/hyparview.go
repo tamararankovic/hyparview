@@ -7,8 +7,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/tamararankovic/hyparview/connections"
 	"github.com/tamararankovic/hyparview/data"
+	"github.com/tamararankovic/hyparview/transport"
 )
 
 type HyParView struct {
@@ -16,13 +16,13 @@ type HyParView struct {
 	config      HyParViewConfig
 	activeView  []Peer
 	passiveView []Peer
-	connManager connections.ConnManager
+	connManager transport.ConnManager
 	peerUp      chan Peer
 	peerDown    chan Peer
-	msgHandlers map[data.MessageType]func(received connections.MsgReceived) error
+	msgHandlers map[data.MessageType]func(received transport.MsgReceived) error
 }
 
-func NewHyParView(config HyParViewConfig, self data.Node, connManager connections.ConnManager) (HyParView, error) {
+func NewHyParView(config HyParViewConfig, self data.Node, connManager transport.ConnManager) (HyParView, error) {
 	hv := HyParView{
 		self:        self,
 		config:      config,
@@ -32,7 +32,7 @@ func NewHyParView(config HyParViewConfig, self data.Node, connManager connection
 		peerDown:    make(chan Peer),
 		connManager: connManager,
 	}
-	hv.msgHandlers = map[data.MessageType]func(received connections.MsgReceived) error{
+	hv.msgHandlers = map[data.MessageType]func(received transport.MsgReceived) error{
 		data.JOIN:            hv.onJoin,
 		data.DISCONNECT:      hv.onDisconnect,
 		data.FORWARD_JOIN:    hv.onForwardJoin,
@@ -65,16 +65,16 @@ func (h *HyParView) GetPeers() []Peer {
 	return h.activeView
 }
 
-func (h *HyParView) OnPeerUp(handler func(peer Peer)) connections.Subscription {
-	return h.connManager.OnConnUp(func(conn connections.Conn) {
+func (h *HyParView) OnPeerUp(handler func(peer Peer)) transport.Subscription {
+	return h.connManager.OnConnUp(func(conn transport.Conn) {
 		if peer := h.getPeer(conn); peer != nil {
 			handler(*peer)
 		}
 	})
 }
 
-func (h *HyParView) OnPeerDown(handler func(peer Peer)) connections.Subscription {
-	return h.connManager.OnConnDown(func(conn connections.Conn) {
+func (h *HyParView) OnPeerDown(handler func(peer Peer)) transport.Subscription {
+	return h.connManager.OnConnDown(func(conn transport.Conn) {
 		if peer := h.getPeer(conn); peer != nil {
 			h.deletePeer(*peer)
 			go h.replacePeer([]string{})
@@ -83,7 +83,7 @@ func (h *HyParView) OnPeerDown(handler func(peer Peer)) connections.Subscription
 	})
 }
 
-func (h *HyParView) onReeive(received connections.MsgReceived) {
+func (h *HyParView) onReeive(received transport.MsgReceived) {
 	handler := h.msgHandlers[received.Msg.Type]
 	if handler == nil {
 		log.Printf("no handler found for message type %s", received.Msg.Type)
@@ -118,7 +118,7 @@ func (h *HyParView) disconnectRandomPeer() error {
 	return nil
 }
 
-func (h *HyParView) getPeer(conn connections.Conn) *Peer {
+func (h *HyParView) getPeer(conn transport.Conn) *Peer {
 	index := slices.IndexFunc(h.activeView, func(peer Peer) bool {
 		return peer.conn.GetAddress() == conn.GetAddress()
 	})

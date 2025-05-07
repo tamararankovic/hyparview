@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/tamararankovic/hyparview/connections"
 	"github.com/tamararankovic/hyparview/data"
 	"github.com/tamararankovic/hyparview/hyparview"
+	"github.com/tamararankovic/hyparview/transport"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 		ID:            config.NodeID,
 		ListenAddress: config.ListenAddress,
 	}
-	connManager := connections.NewConnManager(connections.NewTCPConn, connections.AcceptTcpConnsFn(self.ListenAddress))
+	connManager := transport.NewConnManager(transport.NewTCPConn, transport.AcceptTcpConnsFn(self.ListenAddress))
 	hv, err := hyparview.NewHyParView(config.HyParViewConfig, self, connManager)
 	if err != nil {
 		log.Fatal(err)
